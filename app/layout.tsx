@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { QueueShell } from "@/components/queue-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -20,7 +19,11 @@ export const metadata: Metadata = {
   description: "Review and manage documents",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"
@@ -28,11 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <SiteHeader />
-
-        <main className="flex flex-1 flex-col">
-          <QueueShell>{children}</QueueShell>
-        </main>
-
+        <main className="flex flex-1 flex-col">{children}</main>
         <SiteFooter />
       </body>
     </html>

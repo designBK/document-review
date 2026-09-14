@@ -1,36 +1,63 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePathname, useRouter } from "next/navigation";
+import { NewReviewDialog } from "@/components/new-review-dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const TABS = [
+  { value: "document-queue", label: "Document Queue", href: "/document-queue" },
+  {
+    value: "document-review",
+    label: "Document Review",
+    href: "/document-review",
+  },
+  {
+    value: "document-readiness",
+    label: "Document Readiness",
+    href: "/document-readiness",
+  },
+  { value: "sign-off", label: "Sign Off", href: "/sign-off" },
+] as const;
+
+function tabFromPathname(pathname: string) {
+  const match = TABS.find((tab) => pathname === tab.href || pathname.startsWith(`${tab.href}/`));
+  return match?.value ?? "document-queue";
+}
 
 export function QueueShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const activeTab = tabFromPathname(pathname);
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">
           Document Review Queue
         </h1>
-        <Button>New review</Button>
+        <NewReviewDialog />
       </div>
 
-      <Tabs defaultValue="document-queue" className="w-full gap-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const tab = TABS.find((item) => item.value === value);
+          if (tab && tab.href !== pathname) {
+            router.push(tab.href);
+          }
+        }}
+        className="w-full gap-4"
+      >
         <TabsList className="w-full">
-          <TabsTrigger value="document-queue">Document Queue</TabsTrigger>
-          <TabsTrigger value="document-review">Document Review</TabsTrigger>
-          <TabsTrigger value="document-readiness">Document Readiness</TabsTrigger>
-          <TabsTrigger value="sign-off">Sign Off</TabsTrigger>
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="document-queue">{children}</TabsContent>
-        <TabsContent value="document-review">
-          <p className="text-muted-foreground">Document Review content</p>
-        </TabsContent>
-        <TabsContent value="document-readiness">
-          <p className="text-muted-foreground">Document Readiness content</p>
-        </TabsContent>
-        <TabsContent value="sign-off">
-          <p className="text-muted-foreground">Sign Off content</p>
-        </TabsContent>
       </Tabs>
+
+      <div className="flex-1">{children}</div>
     </div>
   );
 }
