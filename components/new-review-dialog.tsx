@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createReview } from "@/lib/reviews-cache";
-import { DOCUMENT_ACCEPT, DOCUMENT_ACCEPT_LABEL } from "@/lib/reviews";
+import {
+  DOCUMENT_ACCEPT,
+  DOCUMENT_ACCEPT_LABEL,
+  notifyReviewsChanged,
+} from "@/lib/reviews";
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -34,6 +37,7 @@ export function NewReviewDialog() {
   const [businessName, setBusinessName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const input = fileInputRef.current;
@@ -118,7 +122,7 @@ export function NewReviewDialog() {
     setFiles((current) => current.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const name = businessName.trim();
@@ -131,9 +135,50 @@ export function NewReviewDialog() {
       return;
     }
 
-    createReview({ businessName: name, files });
-    setOpen(false);
-    resetForm();
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.set("businessName", name);
+      for (const file of files) {
+        formData.append("files", file, file.name);
+      }
+
+      const response = await fetch("/api/reviews", {
+        method: "POST",
+        body: formData,
+      });
+
+      let payload: { error?: string } = {};
+      try {
+        payload = (await response.json()) as { error?: string };
+      } catch {
+        payload = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error ?? `Failed to create review (${response.status}).`
+        );
+      }
+
+      notifyReviewsChanged();
+      setOpen(false);
+      resetForm();
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to create review.";
+      setError(
+        message === "Failed to fetch"
+          ? "Network error talking to the app server. Hard-refresh http://localhost:3000 and try again."
+          : message
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -157,8 +202,8 @@ export function NewReviewDialog() {
             <DialogHeader>
               <DialogTitle>New review</DialogTitle>
               <DialogDescription>
-                Add a business name and upload documents. Reviews are stored in
-                cache with a status of new until a database is available.
+                Add a business name and upload documents. Reviews are saved to
+                Supabase with status new, and files go to document storage.
               </DialogDescription>
             </DialogHeader>
 
@@ -231,6 +276,7 @@ export function NewReviewDialog() {
               <Button
                 type="button"
                 variant="outline"
+                disabled={submitting}
                 onClick={() => {
                   setOpen(false);
                   resetForm();
@@ -238,7 +284,9 @@ export function NewReviewDialog() {
               >
                 Cancel
               </Button>
-              <Button type="submit">Create review</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Creating…" : "Create review"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
