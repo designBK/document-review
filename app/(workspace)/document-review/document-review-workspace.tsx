@@ -19,84 +19,68 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useReviews } from "@/hooks/use-reviews";
 import {
+  getFindingSeverityBadgeVariant,
   getFindingStatusLabel,
   getFindingTypeLabel,
   type Finding,
   type FindingStatus,
-  type FindingType,
 } from "@/lib/findings";
+import { fetchJson, getErrorMessage } from "@/lib/http";
+import { getReviewStatusLabel, type ReviewStatus } from "@/lib/reviews";
 import {
-  getReviewStatusLabel,
-  type Review,
-} from "@/lib/reviews";
+  buildCompletenessRows,
+  getCompletenessStatusLabel,
+} from "@/lib/underwriting/completeness";
 import {
-  CHECKLIST_FIELDS,
   EXPECTED_DOCUMENTS,
   detectDocumentKind,
 } from "@/lib/underwriting/checklist";
 
-function severityVariant(severity: Finding["severity"]) {
-  if (severity === "blocker") return "destructive" as const;
-  if (severity === "warning") return "outline" as const;
-  return "secondary" as const;
-}
+type FindingsResponse = {
+  findings: Finding[];
+};
+
+type AnalyzeResponse = {
+  findings: Finding[];
+  reviewStatus?: ReviewStatus;
+};
+
+type FindingUpdateResponse = {
+  finding: Finding;
+};
 
 export function DocumentReviewWorkspace() {
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const {
+    reviews,
+    setReviews,
+    loading,
+    error,
+    setError,
+  } = useReviews();
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
-  const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const selectedReview = useMemo(
     () => reviews.find((review) => review.id === selectedReviewId) ?? null,
     [reviews, selectedReviewId]
   );
 
-  const loadReviews = useCallback(async () => {
-    const response = await fetch("/api/reviews");
-    const payload = (await response.json()) as {
-      reviews?: Review[];
-      error?: string;
-    };
-    if (!response.ok) {
-      throw new Error(payload.error ?? "Failed to load reviews.");
+  useEffect(() => {
+    if (!selectedReviewId && reviews[0]) {
+      setSelectedReviewId(reviews[0].id);
     }
-    setReviews(payload.reviews ?? []);
-    setSelectedReviewId((current) => current ?? payload.reviews?.[0]?.id ?? null);
-  }, []);
+  }, [reviews, selectedReviewId]);
 
   const loadFindings = useCallback(async (reviewId: string) => {
-    const response = await fetch(`/api/reviews/${reviewId}/findings`);
-    const payload = (await response.json()) as {
-      findings?: Finding[];
-      error?: string;
-    };
-    if (!response.ok) {
-      throw new Error(payload.error ?? "Failed to load findings.");
-    }
+    const payload = await fetchJson<FindingsResponse>(
+      `/api/reviews/${reviewId}/findings`
+    );
     setFindings(payload.findings ?? []);
   }, []);
-
-  useEffect(() => {
-    async function bootstrap() {
-      try {
-        setLoading(true);
-        setError(null);
-        await loadReviews();
-      } catch (loadError) {
-        setError(
-          loadError instanceof Error ? loadError.message : "Failed to load."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-    void bootstrap();
-  }, [loadReviews]);
 
   useEffect(() => {
     if (!selectedReviewId) {
@@ -104,58 +88,24 @@ export function DocumentReviewWorkspace() {
       return;
     }
     void loadFindings(selectedReviewId).catch((loadError: unknown) => {
-      setError(
-        loadError instanceof Error ? loadError.message : "Failed to load findings."
-      );
+      setError(getErrorMessage(loadError, "Failed to load findings."));
     });
-  }, [selectedReviewId, loadFindings]);
+  }, [selectedReviewId, loadFindings, setError]);
 
-  const completeness = useMemo(() => {
-    if (!selectedReview) return [];
-    const presentKinds = new Set(
-      selectedReview.documents
-        .map((doc) => detectDocumentKind(doc.fileName))
-        .filter(Boolean)
-    );
-    return CHECKLIST_FIELDS.map((field) => {
-      const related = findings.filter((finding) => finding.fieldKey === field.key);
-      const openIssue = related.find(
-        (finding) =>
-          finding.status === "open" &&
-          (finding.type === "missing_field" ||
-            finding.type === "unclear_field" ||
-            finding.type === "conflict")
-      );
-      return {
-        field,
-        status: openIssue
-          ? openIssue.type
-          : related.some((finding) => finding.status === "accepted")
-            ? "accepted"
-            : presentKinds.size > 0
-              ? "clear"
-              : "unknown",
-      };
-    });
-  }, [selectedReview, findings]);
+  const completeness = useMemo(
+    () => buildCompletenessRows(selectedReview, findings),
+    [selectedReview, findings]
+  );
 
   async function runAnalysis() {
     if (!selectedReviewId) return;
     setAnalyzing(true);
     setError(null);
     try {
-      const response = await fetch(
+      const payload = await fetchJson<AnalyzeResponse>(
         `/api/reviews/${selectedReviewId}/analyze`,
         { method: "POST" }
       );
-      const payload = (await response.json()) as {
-        findings?: Finding[];
-        reviewStatus?: Review["status"];
-        error?: string;
-      };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Analysis failed.");
-      }
       setFindings(payload.findings ?? []);
       if (payload.reviewStatus) {
         setReviews((current) =>
@@ -167,7 +117,7 @@ export function DocumentReviewWorkspace() {
         );
       }
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Analysis failed.");
+      setError(getErrorMessage(runError, "Analysis failed."));
     } finally {
       setAnalyzing(false);
     }
@@ -177,29 +127,21 @@ export function DocumentReviewWorkspace() {
     setUpdatingId(findingId);
     setError(null);
     try {
-      const response = await fetch(`/api/findings/${findingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const payload = (await response.json()) as {
-        finding?: Finding;
-        error?: string;
-      };
-      if (!response.ok || !payload.finding) {
-        throw new Error(payload.error ?? "Failed to update finding.");
-      }
+      const payload = await fetchJson<FindingUpdateResponse>(
+        `/api/findings/${findingId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
       setFindings((current) =>
         current.map((finding) =>
-          finding.id === findingId ? payload.finding! : finding
+          finding.id === findingId ? payload.finding : finding
         )
       );
     } catch (updateError) {
-      setError(
-        updateError instanceof Error
-          ? updateError.message
-          : "Failed to update finding."
-      );
+      setError(getErrorMessage(updateError, "Failed to update finding."));
     } finally {
       setUpdatingId(null);
     }
@@ -302,13 +244,7 @@ export function DocumentReviewWorkspace() {
                   <TableCell>{field.required ? "Yes" : "No"}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {status === "clear"
-                        ? "Clear"
-                        : status === "accepted"
-                          ? "Accepted"
-                          : status === "unknown"
-                            ? "Not analyzed"
-                            : getFindingTypeLabel(status as FindingType)}
+                      {getCompletenessStatusLabel(status)}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -338,7 +274,9 @@ export function DocumentReviewWorkspace() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{finding.title}</span>
-                  <Badge variant={severityVariant(finding.severity)}>
+                  <Badge
+                    variant={getFindingSeverityBadgeVariant(finding.severity)}
+                  >
                     {finding.severity}
                   </Badge>
                   <Badge variant="outline">

@@ -79,3 +79,11 @@ export function getFindingTypeLabel(type: FindingType) {
 export function getFindingStatusLabel(status: FindingStatus) {
   return FINDING_STATUS_LABELS[status] ?? status;
 }
+
+export function getFindingSeverityBadgeVariant(
+  severity: FindingSeverity
+): "destructive" | "outline" | "secondary" {
+  if (severity === "blocker") return "destructive";
+  if (severity === "warning") return "outline";
+  return "secondary";
+}

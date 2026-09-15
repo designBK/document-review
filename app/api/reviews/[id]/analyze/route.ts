@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { runStubAnalysis } from "@/lib/analysis/stub-provider";
+import type { IdRouteContext } from "@/lib/api/route-context";
 import { mapAnalysisRun, mapFinding } from "@/lib/findings-mapper";
 import { mapReview } from "@/lib/reviews-mapper";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
-
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(_request: Request, context: IdRouteContext) {
   try {
     const { id } = await context.params;
     const supabase = createAdminClient();

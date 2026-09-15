@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -11,54 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  REVIEWS_CHANGED_EVENT,
-  getReviewStatusLabel,
-  type Review,
-} from "@/lib/reviews";
+import { useReviews } from "@/hooks/use-reviews";
+import { getReviewStatusLabel } from "@/lib/reviews";
 
 export function DocumentQueue() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadReviews = useCallback(async () => {
-    try {
-      setError(null);
-      const response = await fetch("/api/reviews");
-      const payload = (await response.json()) as {
-        reviews?: Review[];
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to load reviews.");
-      }
-
-      setReviews(payload.reviews ?? []);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Failed to load reviews."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadReviews();
-
-    function handleReviewsChanged() {
-      void loadReviews();
-    }
-
-    window.addEventListener(REVIEWS_CHANGED_EVENT, handleReviewsChanged);
-    return () => {
-      window.removeEventListener(REVIEWS_CHANGED_EVENT, handleReviewsChanged);
-    };
-  }, [loadReviews]);
+  const { reviews, loading, error } = useReviews({ listenForChanges: true });
 
   return (
     <Table>
