@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { DocumentReviewWorkspace } from "./document-review-workspace";
 
@@ -6,5 +7,11 @@ export const metadata: Metadata = {
 };
 
 export default function DocumentReviewPage() {
-  return <DocumentReviewWorkspace />;
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Loading reviews…</p>}
+    >
+      <DocumentReviewWorkspace />
+    </Suspense>
+  );
 }

@@ -25,3 +25,7 @@ export function getWorkspaceTabFromPathname(pathname: string): WorkspaceTabValue
 export function getWorkspaceTabByValue(value: string) {
   return WORKSPACE_TABS.find((tab) => tab.value === value);
 }
+
+export function getDocumentReviewHref(reviewId: string) {
+  return `/document-review?review=${encodeURIComponent(reviewId)}`;
+}
