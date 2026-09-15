@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { DocumentReviewWorkspace } from "./document-review-workspace";
 
 export const metadata: Metadata = {
   title: "Document Review",
 };
 
 export default function DocumentReviewPage() {
-  return <p className="text-sm text-muted-foreground">Document Review content</p>;
+  return <DocumentReviewWorkspace />;
 }
