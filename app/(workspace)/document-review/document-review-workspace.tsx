@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   EXPECTED_DOCUMENTS,
   detectDocumentKind,
 } from "@/lib/underwriting/checklist";
+import { getDocumentReviewHref } from "@/lib/workspace-tabs";
 
 type FindingsResponse = {
   findings: Finding[];
@@ -52,6 +54,9 @@ type FindingUpdateResponse = {
 };
 
 export function DocumentReviewWorkspace() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const reviewFromUrl = searchParams.get("review");
   const {
     reviews,
     setReviews,
@@ -59,7 +64,9 @@ export function DocumentReviewWorkspace() {
     error,
     setError,
   } = useReviews();
-  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(
+    reviewFromUrl
+  );
   const [findings, setFindings] = useState<Finding[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -70,10 +77,28 @@ export function DocumentReviewWorkspace() {
   );
 
   useEffect(() => {
-    if (!selectedReviewId && reviews[0]) {
-      setSelectedReviewId(reviews[0].id);
+    if (reviews.length === 0) {
+      setSelectedReviewId(null);
+      return;
     }
-  }, [reviews, selectedReviewId]);
+
+    if (reviewFromUrl && reviews.some((review) => review.id === reviewFromUrl)) {
+      setSelectedReviewId(reviewFromUrl);
+      return;
+    }
+
+    setSelectedReviewId((current) => {
+      if (current && reviews.some((review) => review.id === current)) {
+        return current;
+      }
+      return reviews[0].id;
+    });
+  }, [reviews, reviewFromUrl]);
+
+  function selectReview(reviewId: string) {
+    setSelectedReviewId(reviewId);
+    router.replace(getDocumentReviewHref(reviewId), { scroll: false });
+  }
 
   const loadFindings = useCallback(async (reviewId: string) => {
     const payload = await fetchJson<FindingsResponse>(
@@ -182,7 +207,7 @@ export function DocumentReviewWorkspace() {
               id="review-select"
               className="h-8 min-w-56 rounded-md border border-input bg-background px-2 text-xs"
               value={selectedReviewId ?? ""}
-              onChange={(event) => setSelectedReviewId(event.target.value)}
+              onChange={(event) => selectReview(event.target.value)}
             >
               {reviews.map((review) => (
                 <option key={review.id} value={review.id}>
