@@ -20,12 +20,8 @@ import {
   DOCUMENT_ACCEPT_LABEL,
   notifyReviewsChanged,
 } from "@/lib/reviews";
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { formatFileSize } from "@/lib/format";
+import { fetchJson, getErrorMessage } from "@/lib/http";
 
 export function NewReviewDialog() {
   const businessNameId = useId();
@@ -145,37 +141,16 @@ export function NewReviewDialog() {
         formData.append("files", file, file.name);
       }
 
-      const response = await fetch("/api/reviews", {
+      await fetchJson("/api/reviews", {
         method: "POST",
         body: formData,
       });
-
-      let payload: { error?: string } = {};
-      try {
-        payload = (await response.json()) as { error?: string };
-      } catch {
-        payload = {};
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          payload.error ?? `Failed to create review (${response.status}).`
-        );
-      }
 
       notifyReviewsChanged();
       setOpen(false);
       resetForm();
     } catch (submitError) {
-      const message =
-        submitError instanceof Error
-          ? submitError.message
-          : "Failed to create review.";
-      setError(
-        message === "Failed to fetch"
-          ? "Network error talking to the app server. Hard-refresh http://localhost:3000 and try again."
-          : message
-      );
+      setError(getErrorMessage(submitError, "Failed to create review."));
     } finally {
       setSubmitting(false);
     }

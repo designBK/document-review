@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { IdRouteContext } from "@/lib/api/route-context";
 import {
   FINDING_STATUSES,
   type FindingStatus,
@@ -6,11 +7,7 @@ import {
 import { mapFinding } from "@/lib/findings-mapper";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
-
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, context: IdRouteContext) {
   try {
     const { id } = await context.params;
     const body = (await request.json()) as {
