@@ -9,7 +9,7 @@ import {
 
 export type CompletenessStatus =
   | FindingType
-  | "accepted"
+  | "agreed"
   | "clear"
   | "unknown";
 
@@ -45,8 +45,8 @@ export function buildCompletenessRows(
 
     const status: CompletenessStatus = openIssue
       ? openIssue.type
-      : related.some((finding) => finding.status === "accepted")
-        ? "accepted"
+      : related.some((finding) => finding.status === "agreed")
+        ? "agreed"
         : presentKinds.size > 0
           ? "clear"
           : "unknown";
@@ -59,8 +59,8 @@ export function getCompletenessStatusLabel(status: CompletenessStatus) {
   switch (status) {
     case "clear":
       return "Clear";
-    case "accepted":
-      return "Accepted";
+    case "agreed":
+      return "Agreed";
     case "unknown":
       return "Not analyzed";
     default:

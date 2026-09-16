@@ -21,16 +21,16 @@ export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
 
 export const FINDING_STATUSES = [
   "open",
-  "accepted",
-  "rejected",
+  "agreed",
+  "disagreed",
   "edited",
 ] as const;
 export type FindingStatus = (typeof FINDING_STATUSES)[number];
 
 export const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {
   open: "Open",
-  accepted: "Accepted",
-  rejected: "Rejected",
+  agreed: "Agreed",
+  disagreed: "Disagreed",
   edited: "Edited",
 };
 
@@ -57,6 +57,7 @@ export type Finding = {
   expectedValue: string | null;
   observedValues: string[];
   confidence: number | null;
+  disagreementReason: string | null;
   evidence: FindingEvidence[];
   createdAt: string;
   updatedAt: string;
