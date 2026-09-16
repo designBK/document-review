@@ -29,3 +29,11 @@ export function getWorkspaceTabByValue(value: string) {
 export function getDocumentReviewHref(reviewId: string) {
   return `/document-review?review=${encodeURIComponent(reviewId)}`;
 }
+
+export function getDocumentReadinessHref() {
+  return "/document-readiness";
+}
+
+export function getSignOffHref() {
+  return "/sign-off";
+}
