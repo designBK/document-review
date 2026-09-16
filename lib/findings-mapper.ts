@@ -30,6 +30,7 @@ type FindingRow = {
   expected_value: string | null;
   observed_values: string[] | null;
   confidence: number | null;
+  disagreement_reason: string | null;
   created_at: string;
   updated_at: string;
   finding_evidence?: EvidenceRow[] | null;
@@ -71,6 +72,7 @@ export function mapFinding(row: FindingRow): Finding {
     expectedValue: row.expected_value,
     observedValues: row.observed_values ?? [],
     confidence: row.confidence,
+    disagreementReason: row.disagreement_reason ?? null,
     evidence: (row.finding_evidence ?? []).map(mapEvidence),
     createdAt: row.created_at,
     updatedAt: row.updated_at,

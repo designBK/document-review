@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useReviews } from "@/hooks/use-reviews";
 import {
   getFindingSeverityBadgeVariant,
@@ -70,6 +72,9 @@ export function DocumentReviewWorkspace() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [disagreeingId, setDisagreeingId] = useState<string | null>(null);
+  const [disagreementReason, setDisagreementReason] = useState("");
+  const [disagreeError, setDisagreeError] = useState<string | null>(null);
 
   const selectedReview = useMemo(
     () => reviews.find((review) => review.id === selectedReviewId) ?? null,
@@ -112,6 +117,9 @@ export function DocumentReviewWorkspace() {
       setFindings([]);
       return;
     }
+    setDisagreeingId(null);
+    setDisagreementReason("");
+    setDisagreeError(null);
     void loadFindings(selectedReviewId).catch((loadError: unknown) => {
       setError(getErrorMessage(loadError, "Failed to load findings."));
     });
@@ -148,7 +156,11 @@ export function DocumentReviewWorkspace() {
     }
   }
 
-  async function updateFindingStatus(findingId: string, status: FindingStatus) {
+  async function updateFindingStatus(
+    findingId: string,
+    status: FindingStatus,
+    options?: { disagreementReason?: string }
+  ) {
     setUpdatingId(findingId);
     setError(null);
     try {
@@ -157,7 +169,10 @@ export function DocumentReviewWorkspace() {
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({
+            status,
+            disagreementReason: options?.disagreementReason,
+          }),
         }
       );
       setFindings((current) =>
@@ -165,11 +180,39 @@ export function DocumentReviewWorkspace() {
           finding.id === findingId ? payload.finding : finding
         )
       );
+      if (status === "disagreed") {
+        setDisagreeingId(null);
+        setDisagreementReason("");
+        setDisagreeError(null);
+      }
     } catch (updateError) {
       setError(getErrorMessage(updateError, "Failed to update finding."));
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  function startDisagree(findingId: string) {
+    setDisagreeingId(findingId);
+    setDisagreementReason("");
+    setDisagreeError(null);
+  }
+
+  function cancelDisagree() {
+    setDisagreeingId(null);
+    setDisagreementReason("");
+    setDisagreeError(null);
+  }
+
+  function confirmDisagree(findingId: string) {
+    const reason = disagreementReason.trim();
+    if (!reason) {
+      setDisagreeError("Add a short reason for disagreeing with this suggestion.");
+      return;
+    }
+    void updateFindingStatus(findingId, "disagreed", {
+      disagreementReason: reason,
+    });
   }
 
   if (loading) {
@@ -283,7 +326,8 @@ export function DocumentReviewWorkspace() {
         <CardHeader className="border-b">
           <CardTitle>Findings</CardTitle>
           <CardDescription>
-            Accept or reject each item for the human-in-the-loop trail.
+            Mark whether you agree with each AI suggestion. Disagree requires a
+            short reason so we can improve the model.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 pt-(--card-spacing)">
@@ -328,28 +372,78 @@ export function DocumentReviewWorkspace() {
                     ))}
                   </ul>
                 ) : null}
+                {finding.status === "disagreed" && finding.disagreementReason ? (
+                  <p className="text-xs">
+                    <span className="font-medium">Disagreement reason: </span>
+                    {finding.disagreementReason}
+                  </p>
+                ) : null}
                 {finding.status === "open" ? (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      disabled={updatingId === finding.id}
-                      onClick={() =>
-                        void updateFindingStatus(finding.id, "accepted")
-                      }
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={updatingId === finding.id}
-                      onClick={() =>
-                        void updateFindingStatus(finding.id, "rejected")
-                      }
-                    >
-                      Reject
-                    </Button>
-                  </div>
+                  disagreeingId === finding.id ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`disagree-reason-${finding.id}`}>
+                          Why do you disagree?
+                        </Label>
+                        <Textarea
+                          id={`disagree-reason-${finding.id}`}
+                          value={disagreementReason}
+                          onChange={(event) => {
+                            setDisagreementReason(event.target.value);
+                            if (disagreeError) setDisagreeError(null);
+                          }}
+                          placeholder="e.g. Limits match the schedule on page 2 of the SOV."
+                          disabled={updatingId === finding.id}
+                          aria-invalid={Boolean(disagreeError)}
+                        />
+                        {disagreeError ? (
+                          <p className="text-xs text-destructive" role="alert">
+                            {disagreeError}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={updatingId === finding.id}
+                          onClick={() => confirmDisagree(finding.id)}
+                        >
+                          {updatingId === finding.id
+                            ? "Saving…"
+                            : "Confirm disagree"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={updatingId === finding.id}
+                          onClick={cancelDisagree}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={updatingId === finding.id}
+                        onClick={() =>
+                          void updateFindingStatus(finding.id, "agreed")
+                        }
+                      >
+                        Agree
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={updatingId === finding.id}
+                        onClick={() => startDisagree(finding.id)}
+                      >
+                        Disagree
+                      </Button>
+                    </div>
+                  )
                 ) : null}
               </div>
             ))

@@ -7,12 +7,40 @@ import {
 import { mapFinding } from "@/lib/findings-mapper";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const FINDING_SELECT = `
+  id,
+  review_id,
+  analysis_run_id,
+  type,
+  severity,
+  status,
+  field_key,
+  title,
+  summary,
+  suggested_action,
+  expected_value,
+  observed_values,
+  confidence,
+  disagreement_reason,
+  created_at,
+  updated_at,
+  finding_evidence (
+    id,
+    finding_id,
+    document_id,
+    page_number,
+    snippet,
+    created_at
+  )
+`;
+
 export async function PATCH(request: Request, context: IdRouteContext) {
   try {
     const { id } = await context.params;
     const body = (await request.json()) as {
       status?: FindingStatus;
       summary?: string;
+      disagreementReason?: string;
     };
 
     if (!body.status || !FINDING_STATUSES.includes(body.status)) {
@@ -22,12 +50,27 @@ export async function PATCH(request: Request, context: IdRouteContext) {
       );
     }
 
+    const disagreementReason =
+      typeof body.disagreementReason === "string"
+        ? body.disagreementReason.trim()
+        : "";
+
+    if (body.status === "disagreed" && !disagreementReason) {
+      return NextResponse.json(
+        { error: "A disagreement reason is required." },
+        { status: 400 }
+      );
+    }
+
     const supabase = createAdminClient();
     const updates: {
       status: FindingStatus;
       summary?: string;
+      disagreement_reason: string | null;
     } = {
       status: body.status,
+      disagreement_reason:
+        body.status === "disagreed" ? disagreementReason : null,
     };
 
     if (typeof body.summary === "string" && body.summary.trim()) {
@@ -38,33 +81,7 @@ export async function PATCH(request: Request, context: IdRouteContext) {
       .from("findings")
       .update(updates)
       .eq("id", id)
-      .select(
-        `
-        id,
-        review_id,
-        analysis_run_id,
-        type,
-        severity,
-        status,
-        field_key,
-        title,
-        summary,
-        suggested_action,
-        expected_value,
-        observed_values,
-        confidence,
-        created_at,
-        updated_at,
-        finding_evidence (
-          id,
-          finding_id,
-          document_id,
-          page_number,
-          snippet,
-          created_at
-        )
-      `
-      )
+      .select(FINDING_SELECT)
       .single();
 
     if (error || !data) {

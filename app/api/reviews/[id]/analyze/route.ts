@@ -153,6 +153,7 @@ export async function POST(_request: Request, context: IdRouteContext) {
           expected_value,
           observed_values,
           confidence,
+          disagreement_reason,
           created_at,
           updated_at,
           finding_evidence (
