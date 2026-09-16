@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -41,11 +42,8 @@ import {
   EXPECTED_DOCUMENTS,
   detectDocumentKind,
 } from "@/lib/underwriting/checklist";
-import { getDocumentReviewHref } from "@/lib/workspace-tabs";
-
-type FindingsResponse = {
-  findings: Finding[];
-};
+import { getDashboardHref } from "@/lib/workspace-tabs";
+import { cn } from "cn";
 
 type AnalyzeResponse = {
   findings: Finding[];
@@ -57,9 +55,8 @@ type FindingUpdateResponse = {
 };
 
 export function DocumentReviewWorkspace() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const reviewFromUrl = searchParams.get("review");
+  const reviewId = searchParams.get("review");
   const {
     reviews,
     setReviews,
@@ -67,84 +64,34 @@ export function DocumentReviewWorkspace() {
     error,
     setError,
   } = useReviews();
-  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(
-    reviewFromUrl
-  );
   const [findings, setFindings] = useState<Finding[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [disagreeingId, setDisagreeingId] = useState<string | null>(null);
   const [disagreementReason, setDisagreementReason] = useState("");
   const [disagreeError, setDisagreeError] = useState<string | null>(null);
+  const autoAnalyzedReviewIdRef = useRef<string | null>(null);
 
   const selectedReview = useMemo(
-    () => reviews.find((review) => review.id === selectedReviewId) ?? null,
-    [reviews, selectedReviewId]
+    () => reviews.find((review) => review.id === reviewId) ?? null,
+    [reviews, reviewId]
   );
+  const selectedReviewId = selectedReview?.id ?? null;
 
-  useEffect(() => {
-    if (reviews.length === 0) {
-      setSelectedReviewId(null);
-      return;
-    }
-
-    if (reviewFromUrl && reviews.some((review) => review.id === reviewFromUrl)) {
-      setSelectedReviewId(reviewFromUrl);
-      return;
-    }
-
-    setSelectedReviewId((current) => {
-      if (current && reviews.some((review) => review.id === current)) {
-        return current;
-      }
-      return reviews[0].id;
-    });
-  }, [reviews, reviewFromUrl]);
-
-  function selectReview(reviewId: string) {
-    setSelectedReviewId(reviewId);
-    router.replace(getDocumentReviewHref(reviewId), { scroll: false });
-  }
-
-  const loadFindings = useCallback(async (reviewId: string) => {
-    const payload = await fetchJson<FindingsResponse>(
-      `/api/reviews/${reviewId}/findings`
-    );
-    setFindings(payload.findings ?? []);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedReviewId) {
-      setFindings([]);
-      return;
-    }
-    setDisagreeingId(null);
-    setDisagreementReason("");
-    setDisagreeError(null);
-    void loadFindings(selectedReviewId).catch((loadError: unknown) => {
-      setError(getErrorMessage(loadError, "Failed to load findings."));
-    });
-  }, [selectedReviewId, loadFindings, setError]);
-
-  const completeness = useMemo(
-    () => buildCompletenessRows(selectedReview, findings),
-    [selectedReview, findings]
-  );
-
-  async function runAnalysis() {
-    if (!selectedReviewId) return;
+  const runAnalysis = useCallback(async () => {
+    if (!reviewId) return;
     setAnalyzing(true);
     setError(null);
     try {
       const payload = await fetchJson<AnalyzeResponse>(
-        `/api/reviews/${selectedReviewId}/analyze`,
+        `/api/reviews/${reviewId}/analyze`,
         { method: "POST" }
       );
       setFindings(payload.findings ?? []);
       if (payload.reviewStatus) {
         setReviews((current) =>
           current.map((review) =>
-            review.id === selectedReviewId
+            review.id === reviewId
               ? { ...review, status: payload.reviewStatus! }
               : review
           )
@@ -155,7 +102,30 @@ export function DocumentReviewWorkspace() {
     } finally {
       setAnalyzing(false);
     }
-  }
+  }, [reviewId, setError, setReviews]);
+
+  useEffect(() => {
+    if (!reviewId || !selectedReviewId) {
+      setFindings([]);
+      autoAnalyzedReviewIdRef.current = null;
+      return;
+    }
+
+    if (autoAnalyzedReviewIdRef.current === reviewId) {
+      return;
+    }
+
+    autoAnalyzedReviewIdRef.current = reviewId;
+    setDisagreeingId(null);
+    setDisagreementReason("");
+    setDisagreeError(null);
+    void runAnalysis();
+  }, [reviewId, selectedReviewId, runAnalysis]);
+
+  const completeness = useMemo(
+    () => buildCompletenessRows(selectedReview, findings),
+    [selectedReview, findings]
+  );
 
   async function updateFindingStatus(
     findingId: string,
@@ -208,7 +178,9 @@ export function DocumentReviewWorkspace() {
   function confirmDisagree(findingId: string) {
     const reason = disagreementReason.trim();
     if (!reason) {
-      setDisagreeError("Add a short reason for disagreeing with this suggestion.");
+      setDisagreeError(
+        "Add a short reason for disagreeing with this suggestion."
+      );
       return;
     }
     void updateFindingStatus(findingId, "disagreed", {
@@ -217,16 +189,49 @@ export function DocumentReviewWorkspace() {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading reviews…</p>;
+    return <p className="text-sm text-muted-foreground">Loading review…</p>;
   }
 
-  if (reviews.length === 0) {
+  if (!reviewId) {
     return (
       <Alert>
-        <AlertTitle>No reviews yet</AlertTitle>
-        <AlertDescription>
-          Create a review with documents in Document Queue, then return here to
-          run stub analysis.
+        <AlertTitle>No review selected</AlertTitle>
+        <AlertDescription className="flex flex-col gap-2">
+          <span>
+            Open a packet from the Dashboard to start document review.
+          </span>
+          <Link
+            href={getDashboardHref()}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "w-fit"
+            )}
+          >
+            Back to Dashboard
+          </Link>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!selectedReview) {
+    return (
+      <Alert>
+        <AlertTitle>Review not found</AlertTitle>
+        <AlertDescription className="flex flex-col gap-2">
+          <span>
+            That review is missing or was removed. Pick another packet from the
+            Dashboard.
+          </span>
+          <Link
+            href={getDashboardHref()}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "w-fit"
+            )}
+          >
+            Back to Dashboard
+          </Link>
         </AlertDescription>
       </Alert>
     );
@@ -236,65 +241,73 @@ export function DocumentReviewWorkspace() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader className="border-b">
-          <CardTitle>Document Review</CardTitle>
-          <CardDescription>
-            Commercial package POC: stub analysis checks packet completeness and
-            cross-document consistency. Swap in an LLM provider later.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>{selectedReview.businessName}</CardTitle>
+              <CardDescription>
+                Commercial package review — stub analysis checks packet
+                completeness and cross-document consistency.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">
+                {getReviewStatusLabel(selectedReview.status)}
+              </Badge>
+              <Link
+                href={getDashboardHref()}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" })
+                )}
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 pt-(--card-spacing)">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs font-medium" htmlFor="review-select">
-              Review
-            </label>
-            <select
-              id="review-select"
-              className="h-8 min-w-56 rounded-md border border-input bg-background px-2 text-xs"
-              value={selectedReviewId ?? ""}
-              onChange={(event) => selectReview(event.target.value)}
-            >
-              {reviews.map((review) => (
-                <option key={review.id} value={review.id}>
-                  {review.businessName} ({getReviewStatusLabel(review.status)})
-                </option>
-              ))}
-            </select>
-            <Button
-              onClick={() => void runAnalysis()}
-              disabled={!selectedReviewId || analyzing}
-            >
-              {analyzing ? "Running…" : "Run stub analysis"}
-            </Button>
+          <div className="flex flex-wrap items-center gap-3">
             <CompleteReviewDialog
               review={selectedReview}
               findings={findings}
               onDisposed={(reviewStatus) => {
-                if (!selectedReviewId) return;
                 setReviews((current) =>
                   current.map((review) =>
-                    review.id === selectedReviewId
+                    review.id === selectedReview.id
                       ? { ...review, status: reviewStatus }
                       : review
                   )
                 );
               }}
             />
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto px-0"
+              disabled={analyzing}
+              onClick={() => void runAnalysis()}
+            >
+              {analyzing ? "Running analysis…" : "Re-run stub analysis"}
+            </Button>
           </div>
 
-          {selectedReview ? (
-            <div className="flex flex-wrap gap-2">
-              {EXPECTED_DOCUMENTS.map((doc) => {
-                const present = selectedReview.documents.some(
-                  (item) => detectDocumentKind(item.fileName) === doc.kind
-                );
-                return (
-                  <Badge key={doc.kind} variant={present ? "default" : "outline"}>
-                    {doc.label}: {present ? "found" : "missing"}
-                  </Badge>
-                );
-              })}
-            </div>
+          {analyzing && findings.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Running stub analysis…
+            </p>
           ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {EXPECTED_DOCUMENTS.map((doc) => {
+              const present = selectedReview.documents.some(
+                (item) => detectDocumentKind(item.fileName) === doc.kind
+              );
+              return (
+                <Badge key={doc.kind} variant={present ? "default" : "outline"}>
+                  {doc.label}: {present ? "found" : "missing"}
+                </Badge>
+              );
+            })}
+          </div>
 
           {error ? (
             <p className="text-xs text-destructive" role="alert">
