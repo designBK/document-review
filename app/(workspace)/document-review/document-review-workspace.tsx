@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { CompleteReviewDialog } from "@/components/complete-review-dialog";
 import { useReviews } from "@/hooks/use-reviews";
 import {
   getFindingSeverityBadgeVariant,
@@ -264,6 +265,20 @@ export function DocumentReviewWorkspace() {
             >
               {analyzing ? "Running…" : "Run stub analysis"}
             </Button>
+            <CompleteReviewDialog
+              review={selectedReview}
+              findings={findings}
+              onDisposed={(reviewStatus) => {
+                if (!selectedReviewId) return;
+                setReviews((current) =>
+                  current.map((review) =>
+                    review.id === selectedReviewId
+                      ? { ...review, status: reviewStatus }
+                      : review
+                  )
+                );
+              }}
+            />
           </div>
 
           {selectedReview ? (
