@@ -1,9 +1,9 @@
-import { QueueShell } from "@/components/queue-shell";
+import { WorkspaceChrome } from "@/components/workspace-chrome";
 
 export default function WorkspaceLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <QueueShell>{children}</QueueShell>;
+  return <WorkspaceChrome>{children}</WorkspaceChrome>;
 }

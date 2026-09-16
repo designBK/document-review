@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { DocumentReadinessBoard } from "./document-readiness-board";
 
@@ -17,7 +18,13 @@ export default function DocumentReadinessPage() {
           ready for manager sign-off, or denied.
         </p>
       </div>
-      <DocumentReadinessBoard />
+      <Suspense
+        fallback={
+          <p className="text-sm text-muted-foreground">Loading readiness…</p>
+        }
+      >
+        <DocumentReadinessBoard />
+      </Suspense>
     </div>
   );
 }

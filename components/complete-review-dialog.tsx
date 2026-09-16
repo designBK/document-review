@@ -30,7 +30,6 @@ import {
 } from "@/lib/reviews";
 import {
   getDocumentReadinessHref,
-  getSignOffHref,
 } from "@/lib/workspace-tabs";
 
 type DisposeResponse = {
@@ -153,9 +152,9 @@ export function CompleteReviewDialog({
       reset();
 
       if (effectiveDecision === "awaiting_client") {
-        router.push(getDocumentReadinessHref());
+        router.push(getDocumentReadinessHref({ notice: "awaiting-client" }));
       } else {
-        router.push(getSignOffHref());
+        router.push(getDocumentReadinessHref({ notice: "sent-to-sign-off" }));
       }
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Failed to complete review."));
@@ -173,9 +172,7 @@ export function CompleteReviewDialog({
         if (!nextOpen) reset();
       }}
     >
-      <DialogTrigger
-        render={<Button variant="secondary" disabled={!review} />}
-      >
+      <DialogTrigger render={<Button disabled={!review} />}>
         Complete review
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg" showCloseButton={!submitting}>
@@ -203,8 +200,8 @@ export function CompleteReviewDialog({
               {recommendation.summary}
             </p>
             <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-              {recommendation.rationale.map((item) => (
-                <li key={item}>{item}</li>
+              {recommendation.rationale.map((item, index) => (
+                <li key={`rationale-${index}`}>{item}</li>
               ))}
             </ul>
           </section>
@@ -267,8 +264,8 @@ export function CompleteReviewDialog({
                     </p>
                   ) : (
                     <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-                      {confirmationItems.map((item) => (
-                        <li key={item}>{item}</li>
+                      {confirmationItems.map((item, index) => (
+                        <li key={`request-${index}`}>{item}</li>
                       ))}
                     </ul>
                   )}
@@ -304,8 +301,8 @@ export function CompleteReviewDialog({
                     </p>
                   ) : (
                     <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-                      {confirmationItems.map((item) => (
-                        <li key={item}>{item}</li>
+                      {confirmationItems.map((item, index) => (
+                        <li key={`denial-${index}`}>{item}</li>
                       ))}
                     </ul>
                   )}

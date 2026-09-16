@@ -2,18 +2,21 @@
 
 import { useEffect, useRef, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { NewReviewDialog } from "@/components/new-review-dialog";
+import {
+  WorkspaceFrame,
+  WorkspaceHeading,
+} from "@/components/workspace-frame";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  WORKSPACE_TABS,
-  getWorkspaceTabByValue,
-  getWorkspaceTabFromPathname,
+  UNDERWRITER_TABS,
+  getUnderwriterTabByValue,
+  getUnderwriterTabFromPathname,
 } from "@/lib/workspace-tabs";
 
-export function QueueShell({ children }: { children: React.ReactNode }) {
+export function UnderwriterShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeTab = getWorkspaceTabFromPathname(pathname);
+  const activeTab = getUnderwriterTabFromPathname(pathname);
   const routerReadyRef = useRef(false);
   const [, startTransition] = useTransition();
 
@@ -22,19 +25,17 @@ export function QueueShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Document Review Queue
-        </h1>
-        <NewReviewDialog />
-      </div>
+    <WorkspaceFrame>
+      <WorkspaceHeading
+        title="Underwriting workspace"
+        description="Review AI findings, then hand packets to readiness or manager sign-off."
+      />
 
       <Tabs
         value={activeTab}
         onValueChange={(value) => {
           if (!routerReadyRef.current) return;
-          const tab = getWorkspaceTabByValue(value);
+          const tab = getUnderwriterTabByValue(value);
           if (!tab || tab.href === pathname) return;
           startTransition(() => {
             router.push(tab.href);
@@ -43,7 +44,7 @@ export function QueueShell({ children }: { children: React.ReactNode }) {
         className="w-full gap-4"
       >
         <TabsList className="w-full">
-          {WORKSPACE_TABS.map((tab) => (
+          {UNDERWRITER_TABS.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
             </TabsTrigger>
@@ -52,6 +53,6 @@ export function QueueShell({ children }: { children: React.ReactNode }) {
       </Tabs>
 
       <div className="flex-1">{children}</div>
-    </div>
+    </WorkspaceFrame>
   );
 }
