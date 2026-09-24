@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DashboardKpis } from "@/components/dashboard-kpis";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useReviews } from "@/hooks/use-reviews";
+import { computeDashboardKpis } from "@/lib/dashboard-kpis";
 import { fetchJson, getErrorMessage } from "@/lib/http";
 import {
   getReviewStatusLabel,
@@ -49,6 +51,8 @@ export function DocumentQueue() {
   );
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const kpis = useMemo(() => computeDashboardKpis(reviews), [reviews]);
 
   function closeDeleteDialog() {
     if (deleting) return;
@@ -84,7 +88,9 @@ export function DocumentQueue() {
         : `${reviews.length} review${reviews.length === 1 ? "" : "s"} in queue`;
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
+      <DashboardKpis kpis={kpis} loading={loading} />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between border-b">
           <CardTitle>Review queue</CardTitle>
@@ -211,6 +217,6 @@ export function DocumentQueue() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
