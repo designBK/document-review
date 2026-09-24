@@ -33,6 +33,8 @@ export async function GET(_request: Request, context: IdRouteContext) {
           finding_id,
           document_id,
           page_number,
+          section,
+          kind,
           snippet,
           created_at
         )

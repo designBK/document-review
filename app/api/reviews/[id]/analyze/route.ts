@@ -97,6 +97,8 @@ export async function POST(_request: Request, context: IdRouteContext) {
           finding_id: finding.id,
           document_id: item.documentId,
           page_number: item.pageNumber,
+          section: item.section,
+          kind: item.kind,
           snippet: item.snippet,
         }));
       });
@@ -161,6 +163,8 @@ export async function POST(_request: Request, context: IdRouteContext) {
             finding_id,
             document_id,
             page_number,
+            section,
+            kind,
             snippet,
             created_at
           )

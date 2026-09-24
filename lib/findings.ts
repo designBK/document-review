@@ -34,14 +34,56 @@ export const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {
   edited: "Edited",
 };
 
+export const FINDING_EVIDENCE_KINDS = [
+  "observed",
+  "expected_locus",
+  "absence",
+] as const;
+
+export type FindingEvidenceKind = (typeof FINDING_EVIDENCE_KINDS)[number];
+
 export type FindingEvidence = {
   id: string;
   findingId: string;
   documentId: string | null;
   pageNumber: number | null;
+  section: string | null;
+  kind: FindingEvidenceKind;
   snippet: string;
   createdAt: string;
 };
+
+/** Build a compact citation: `Doc · p.3 · Section — snippet`. */
+export function formatEvidenceCitation(
+  evidence: Pick<
+    FindingEvidence,
+    "pageNumber" | "section" | "kind" | "snippet"
+  >,
+  documentLabel: string | null
+): string {
+  const parts: string[] = [];
+  if (documentLabel) parts.push(documentLabel);
+  if (evidence.pageNumber != null) parts.push(`p.${evidence.pageNumber}`);
+  if (evidence.section) parts.push(evidence.section);
+
+  const locus = parts.join(" · ");
+  if (!locus) return evidence.snippet;
+  if (evidence.kind === "absence" && !evidence.snippet.toLowerCase().includes("not found")) {
+    return `${locus} — not found. ${evidence.snippet}`;
+  }
+  return `${locus} — ${evidence.snippet}`;
+}
+
+export function resolveEvidenceDocumentLabel(
+  evidence: Pick<FindingEvidence, "documentId" | "kind">,
+  documentNameById: Map<string, string>
+): string | null {
+  if (evidence.documentId) {
+    return documentNameById.get(evidence.documentId) ?? null;
+  }
+  if (evidence.kind === "absence") return "Packet";
+  return null;
+}
 
 export type Finding = {
   id: string;

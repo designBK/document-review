@@ -26,9 +26,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { CompleteReviewDialog } from "@/components/complete-review-dialog";
 import { useReviews } from "@/hooks/use-reviews";
 import {
+  formatEvidenceCitation,
   getFindingSeverityBadgeVariant,
   getFindingStatusLabel,
   getFindingTypeLabel,
+  resolveEvidenceDocumentLabel,
   type Finding,
   type FindingStatus,
 } from "@/lib/findings";
@@ -77,6 +79,13 @@ export function DocumentReviewWorkspace() {
     [reviews, reviewId]
   );
   const selectedReviewId = selectedReview?.id ?? null;
+  const documentNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const document of selectedReview?.documents ?? []) {
+      map.set(document.id, document.fileName);
+    }
+    return map;
+  }, [selectedReview]);
 
   const runAnalysis = useCallback(async () => {
     if (!reviewId) return;
@@ -394,8 +403,10 @@ export function DocumentReviewWorkspace() {
                   <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
                     {finding.evidence.map((item) => (
                       <li key={item.id}>
-                        {item.pageNumber ? `p.${item.pageNumber}: ` : null}
-                        {item.snippet}
+                        {formatEvidenceCitation(
+                          item,
+                          resolveEvidenceDocumentLabel(item, documentNameById)
+                        )}
                       </li>
                     ))}
                   </ul>
