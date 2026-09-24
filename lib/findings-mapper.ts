@@ -2,6 +2,7 @@ import type {
   AnalysisRun,
   Finding,
   FindingEvidence,
+  FindingEvidenceKind,
   FindingSeverity,
   FindingStatus,
   FindingType,
@@ -12,6 +13,8 @@ type EvidenceRow = {
   finding_id: string;
   document_id: string | null;
   page_number: number | null;
+  section?: string | null;
+  kind?: FindingEvidenceKind | null;
   snippet: string;
   created_at: string;
 };
@@ -52,6 +55,8 @@ export function mapEvidence(row: EvidenceRow): FindingEvidence {
     findingId: row.finding_id,
     documentId: row.document_id,
     pageNumber: row.page_number,
+    section: row.section ?? null,
+    kind: row.kind ?? "observed",
     snippet: row.snippet,
     createdAt: row.created_at,
   };

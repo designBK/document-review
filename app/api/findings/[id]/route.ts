@@ -29,6 +29,8 @@ const FINDING_SELECT = `
     finding_id,
     document_id,
     page_number,
+    section,
+    kind,
     snippet,
     created_at
   )

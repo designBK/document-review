@@ -5,6 +5,13 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -15,7 +22,6 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -69,94 +75,101 @@ export function DocumentQueue() {
     }
   }
 
+  const queueDescription = loading
+    ? "Loading reviews…"
+    : error
+      ? error
+      : reviews.length === 0
+        ? "No reviews yet. Create one with New review."
+        : `${reviews.length} review${reviews.length === 1 ? "" : "s"} in queue`;
+
   return (
     <>
-      <Table>
-        <TableCaption>
-          {loading
-            ? "Loading reviews…"
-            : error
-              ? error
-              : reviews.length === 0
-                ? "No reviews yet. Create one with New review."
-                : `${reviews.length} review${reviews.length === 1 ? "" : "s"} in queue`}
-        </TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Business title</TableHead>
-            <TableHead>Documents</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-0 text-right whitespace-nowrap">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-muted-foreground">
-                Loading…
-              </TableCell>
-            </TableRow>
-          ) : error ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-destructive">
-                {error}
-              </TableCell>
-            </TableRow>
-          ) : reviews.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-muted-foreground">
-                No created reviews to display.
-              </TableCell>
-            </TableRow>
-          ) : (
-            reviews.map((review) => (
-              <TableRow key={review.id}>
-                <TableCell className="font-medium">
-                  {review.businessName}
-                </TableCell>
-                <TableCell>
-                  <div className="flex max-w-md flex-wrap gap-1">
-                    {review.documents.map((document) => (
-                      <Badge key={document.id} variant="outline">
-                        {document.fileName}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {getReviewStatusLabel(review.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="w-0 whitespace-nowrap">
-                  <div className="flex justify-end gap-1">
-                    <Link
-                      href={getDocumentReviewHref(review.id)}
-                      className={buttonVariants({ variant: "outline" })}
-                    >
-                      View
-                    </Link>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setDeleteError(null);
-                        setPendingDelete({
-                          id: review.id,
-                          businessName: review.businessName,
-                        });
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between border-b">
+          <CardTitle>Review queue</CardTitle>
+          <CardDescription>{queueDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-(--card-spacing)">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Business title</TableHead>
+                <TableHead>Documents</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-0 text-right whitespace-nowrap">
+                  Actions
+                </TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted-foreground">
+                    Loading…
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-destructive">
+                    {error}
+                  </TableCell>
+                </TableRow>
+              ) : reviews.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted-foreground">
+                    No created reviews to display.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                reviews.map((review) => (
+                  <TableRow key={review.id}>
+                    <TableCell className="font-medium">
+                      {review.businessName}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex max-w-md flex-wrap gap-1">
+                        {review.documents.map((document) => (
+                          <Badge key={document.id} variant="outline">
+                            {document.fileName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {getReviewStatusLabel(review.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-0 whitespace-nowrap">
+                      <div className="flex justify-end gap-1">
+                        <Link
+                          href={getDocumentReviewHref(review.id)}
+                          className={buttonVariants({ variant: "outline" })}
+                        >
+                          View
+                        </Link>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setPendingDelete({
+                              id: review.id,
+                              businessName: review.businessName,
+                            });
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog
         open={pendingDelete !== null}

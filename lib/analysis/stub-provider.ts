@@ -1,5 +1,6 @@
 import type { Review, ReviewDocument } from "@/lib/reviews";
 import type {
+  FindingEvidenceKind,
   FindingSeverity,
   FindingType,
 } from "@/lib/findings";
@@ -11,6 +12,14 @@ import {
   type FieldKey,
 } from "@/lib/underwriting/checklist";
 
+export type StubEvidenceDraft = {
+  documentId: string | null;
+  pageNumber: number | null;
+  section: string | null;
+  kind: FindingEvidenceKind;
+  snippet: string;
+};
+
 export type StubFindingDraft = {
   type: FindingType;
   severity: FindingSeverity;
@@ -21,11 +30,7 @@ export type StubFindingDraft = {
   expectedValue: string | null;
   observedValues: string[];
   confidence: number;
-  evidence: {
-    documentId: string | null;
-    pageNumber: number | null;
-    snippet: string;
-  }[];
+  evidence: StubEvidenceDraft[];
 };
 
 function docsByKind(documents: ReviewDocument[]) {
@@ -43,6 +48,7 @@ function docsByKind(documents: ReviewDocument[]) {
 /**
  * Deterministic POC analyzer. Produces believable findings from packet
  * composition and filenames so the HITL UX can be demoed without an LLM.
+ * Evidence follows the insight contract: observed | expected_locus | absence.
  */
 export function runStubAnalysis(review: Review): StubFindingDraft[] {
   const findings: StubFindingDraft[] = [];
@@ -65,7 +71,9 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
           {
             documentId: null,
             pageNumber: null,
-            snippet: `Expected document kind "${expected.kind}" not matched by any filename.`,
+            section: expected.label,
+            kind: "absence",
+            snippet: `No uploaded filename matched expected kind "${expected.kind}".`,
           },
         ],
       });
@@ -91,8 +99,10 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
       evidence: [
         {
           documentId: allDocs[0].id,
-          pageNumber: 1,
-          snippet: `Available file "${allDocs[0].fileName}" was not classified as an application.`,
+          pageNumber: null,
+          section: "Named insured",
+          kind: "expected_locus",
+          snippet: `Looked for an application; closest file was "${allDocs[0].fileName}" (not classified as application).`,
         },
       ],
     });
@@ -114,12 +124,16 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
         {
           documentId: application.id,
           pageNumber: 1,
-          snippet: `Application candidate: ${application.fileName}`,
+          section: "Named insured",
+          kind: "observed",
+          snippet: `Applicant / named insured block on ${application.fileName}.`,
         },
         {
           documentId: acord.id,
           pageNumber: 1,
-          snippet: `ACORD candidate: ${acord.fileName}`,
+          section: "Named insured",
+          kind: "observed",
+          snippet: `First named insured field on ${acord.fileName}.`,
         },
       ],
     });
@@ -141,7 +155,9 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
         {
           documentId: application.id,
           pageNumber: 2,
-          snippet: `Review limits section in ${application.fileName}.`,
+          section: "Limits / occurrence",
+          kind: "expected_locus",
+          snippet: `Declarations / limits section in ${application.fileName}; value not confidently extracted.`,
         },
       ],
     });
@@ -162,7 +178,9 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
         {
           documentId: lossRun.id,
           pageNumber: 1,
-          snippet: `Loss run candidate: ${lossRun.fileName}`,
+          section: "Valuation / as-of date",
+          kind: "expected_locus",
+          snippet: `Header / valuation date area on ${lossRun.fileName}; confirm age ≤ 90 days.`,
         },
       ],
     });
@@ -199,7 +217,9 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
           {
             documentId: allDocs[0]?.id ?? null,
             pageNumber: null,
-            snippet: `Checklist field "${field.key}" unmet in current packet.`,
+            section: field.label,
+            kind: "absence",
+            snippet: `No application or ACORD available to satisfy checklist field "${field.key}".`,
           },
         ],
       });
@@ -221,6 +241,8 @@ export function runStubAnalysis(review: Review): StubFindingDraft[] {
       evidence: allDocs.slice(0, 2).map((doc) => ({
         documentId: doc.id,
         pageNumber: 1,
+        section: "Packet overview",
+        kind: "observed" as const,
         snippet: `Included in packet: ${doc.fileName}`,
       })),
     });
