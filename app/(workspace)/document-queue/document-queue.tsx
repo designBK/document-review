@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardKpis } from "@/components/dashboard-kpis";
+import { DashboardCompletenessChart } from "@/components/dashboard-completeness-chart";
+import { DashboardDispositionChart } from "@/components/dashboard-disposition-chart";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useReviews } from "@/hooks/use-reviews";
-import { computeDashboardKpis } from "@/lib/dashboard-kpis";
+import {
+  computeDashboardKpis,
+  computeDispositionMixTrend,
+  computeDocumentCompleteness,
+} from "@/lib/dashboard-kpis";
 import { fetchJson, getErrorMessage } from "@/lib/http";
 import {
   getReviewStatusLabel,
@@ -53,6 +59,14 @@ export function DocumentQueue() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const kpis = useMemo(() => computeDashboardKpis(reviews), [reviews]);
+  const dispositionTrend = useMemo(
+    () => computeDispositionMixTrend(reviews),
+    [reviews]
+  );
+  const completeness = useMemo(
+    () => computeDocumentCompleteness(reviews),
+    [reviews]
+  );
 
   function closeDeleteDialog() {
     if (deleting) return;
@@ -90,6 +104,11 @@ export function DocumentQueue() {
   return (
     <div className="flex flex-col gap-4">
       <DashboardKpis kpis={kpis} loading={loading} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DashboardDispositionChart data={dispositionTrend} />
+        <DashboardCompletenessChart data={completeness} />
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between border-b">
