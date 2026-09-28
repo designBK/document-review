@@ -152,9 +152,19 @@ export function CompleteReviewDialog({
       reset();
 
       if (effectiveDecision === "awaiting_client") {
-        router.push(getDocumentReadinessHref({ notice: "awaiting-client" }));
+        router.push(
+          getDocumentReadinessHref({
+            reviewId: review.id,
+            notice: "awaiting-client",
+          })
+        );
       } else {
-        router.push(getDocumentReadinessHref({ notice: "sent-to-sign-off" }));
+        router.push(
+          getDocumentReadinessHref({
+            reviewId: review.id,
+            notice: "sent-to-sign-off",
+          })
+        );
       }
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Failed to complete review."));

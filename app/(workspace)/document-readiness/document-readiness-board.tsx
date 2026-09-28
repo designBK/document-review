@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -24,7 +26,12 @@ import {
 } from "@/lib/findings";
 import { fetchJson, getErrorMessage } from "@/lib/http";
 import { getReviewStatusBadgeVariant, getReviewStatusLabel, REVIEWS_CHANGED_EVENT } from "@/lib/reviews";
-import { getDocumentReadinessHref } from "@/lib/workspace-tabs";
+import {
+  getDashboardHref,
+  getDocumentReadinessHref,
+  getDocumentReviewHref,
+} from "@/lib/workspace-tabs";
+import { cn } from "cn";
 
 type ReadinessResponse = {
   items: ReadinessItem[];
@@ -34,10 +41,14 @@ export function DocumentReadinessBoard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const notice = searchParams.get("notice");
+  const reviewId = searchParams.get("review");
   const [items, setItems] = useState<ReadinessItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const item = useMemo(
+    () => items.find((entry) => entry.reviewId === reviewId) ?? null,
+    [items, reviewId]
+  );
 
   const loadItems = useCallback(async () => {
     try {
@@ -66,7 +77,9 @@ export function DocumentReadinessBoard() {
   }, [loadItems]);
 
   function dismissNotice() {
-    router.replace(getDocumentReadinessHref());
+    router.replace(
+      getDocumentReadinessHref(reviewId ? { reviewId } : undefined)
+    );
   }
 
   if (loading) {
@@ -119,14 +132,42 @@ export function DocumentReadinessBoard() {
         </p>
       ) : null}
 
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No disposed packets yet. Complete a review to send work here.
-        </p>
+      {!reviewId ? (
+        <Alert>
+          <AlertTitle>No packet selected</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <span>Open a packet from the Dashboard to view its readiness.</span>
+            <Link
+              href={getDashboardHref()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "w-fit"
+              )}
+            >
+              Back to Dashboard
+            </Link>
+          </AlertDescription>
+        </Alert>
+      ) : !item ? (
+        <Alert>
+          <AlertTitle>Packet not ready</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <span>
+              This packet has not been disposed yet. Complete the review to
+              see its readiness package.
+            </span>
+            <Link
+              href={getDocumentReviewHref(reviewId)}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "w-fit"
+              )}
+            >
+              Back to Document Review
+            </Link>
+          </AlertDescription>
+        </Alert>
       ) : (
-        items.map((item) => {
-          const expanded = expandedId === item.disposition.id;
-          return (
             <Card key={item.disposition.id}>
               <CardHeader className="border-b">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -178,18 +219,11 @@ export function DocumentReadinessBoard() {
                     ? ` — ${item.disposition.notificationSummary}`
                     : null}
                 </p>
-                <button
-                  type="button"
-                  className="text-left text-xs font-medium text-primary underline-offset-4 hover:underline"
-                  onClick={() =>
-                    setExpandedId(expanded ? null : item.disposition.id)
-                  }
-                >
-                  {expanded ? "Hide findings package" : "Show findings package"}{" "}
-                  ({item.disposition.findingSnapshot.length})
-                </button>
-                {expanded ? (
-                  item.disposition.findingSnapshot.length === 0 ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium">
+                    Findings package ({item.disposition.findingSnapshot.length})
+                  </p>
+                  {item.disposition.findingSnapshot.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       No findings included in this package.
                     </p>
@@ -230,12 +264,10 @@ export function DocumentReadinessBoard() {
                         </li>
                       ))}
                     </ul>
-                  )
-                ) : null}
+                  )}
+                </div>
               </CardContent>
             </Card>
-          );
-        })
       )}
     </div>
   );

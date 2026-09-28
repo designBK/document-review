@@ -11,6 +11,7 @@ import {
   UNDERWRITER_TABS,
   getUnderwriterTabByValue,
   getUnderwriterTabFromPathname,
+  getUnderwriterTabHref,
 } from "@/lib/workspace-tabs";
 
 export function UnderwriterShell({ children }: { children: React.ReactNode }) {
@@ -36,9 +37,12 @@ export function UnderwriterShell({ children }: { children: React.ReactNode }) {
         onValueChange={(value) => {
           if (!routerReadyRef.current) return;
           const tab = getUnderwriterTabByValue(value);
-          if (!tab || tab.href === pathname) return;
+          if (!tab || tab.value === activeTab) return;
+          const reviewId = new URLSearchParams(window.location.search).get(
+            "review"
+          );
           startTransition(() => {
-            router.push(tab.href);
+            router.push(getUnderwriterTabHref(tab.value, reviewId));
           });
         }}
         className="w-full gap-4"
