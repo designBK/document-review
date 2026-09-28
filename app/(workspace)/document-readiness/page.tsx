@@ -14,8 +14,7 @@ export default function DocumentReadinessPage() {
           Document Readiness
         </h2>
         <p className="text-sm text-muted-foreground">
-          Underwriter handoff board for disposed packets — awaiting client,
-          ready for manager sign-off, or denied.
+          Disposition and findings package for the packet you are reviewing.
         </p>
       </div>
       <Suspense

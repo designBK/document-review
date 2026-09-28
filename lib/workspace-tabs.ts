@@ -40,11 +40,26 @@ export function getDocumentReviewHref(reviewId: string) {
 }
 
 export function getDocumentReadinessHref(options?: {
+  reviewId?: string;
   notice?: ReadinessNotice;
 }) {
-  if (!options?.notice) return DOCUMENT_READINESS_HREF;
-  const params = new URLSearchParams({ notice: options.notice });
-  return `${DOCUMENT_READINESS_HREF}?${params.toString()}`;
+  const params = new URLSearchParams();
+  if (options?.reviewId) params.set("review", options.reviewId);
+  if (options?.notice) params.set("notice", options.notice);
+  const query = params.toString();
+  return query
+    ? `${DOCUMENT_READINESS_HREF}?${query}`
+    : DOCUMENT_READINESS_HREF;
+}
+
+export function getUnderwriterTabHref(
+  value: UnderwriterTabValue,
+  reviewId: string | null
+) {
+  if (value === "document-review") {
+    return reviewId ? getDocumentReviewHref(reviewId) : DOCUMENT_REVIEW_HREF;
+  }
+  return getDocumentReadinessHref(reviewId ? { reviewId } : undefined);
 }
 
 export function getSignOffHref() {
