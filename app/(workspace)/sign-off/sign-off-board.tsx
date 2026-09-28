@@ -17,11 +17,13 @@ import {
 } from "@/lib/dispositions";
 import {
   getFindingSeverityBadgeVariant,
+  getFindingSeverityLabel,
   getFindingStatusLabel,
   getFindingTypeLabel,
 } from "@/lib/findings";
 import { fetchJson, getErrorMessage } from "@/lib/http";
 import {
+  getReviewStatusBadgeVariant,
   getReviewStatusLabel,
   notifyReviewsChanged,
   REVIEWS_CHANGED_EVENT,
@@ -112,7 +114,7 @@ export function SignOffBoard() {
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge variant="secondary">
+                    <Badge variant={getReviewStatusBadgeVariant(item.status)}>
                       {getReviewStatusLabel(item.status)}
                     </Badge>
                     <Badge variant="outline">
@@ -184,7 +186,7 @@ export function SignOffBoard() {
                                 finding.severity
                               )}
                             >
-                              {finding.severity}
+                              {getFindingSeverityLabel(finding.severity)}
                             </Badge>
                             <Badge variant="outline">
                               {getFindingTypeLabel(finding.type)}

@@ -34,11 +34,11 @@ const dispositionChartConfig = {
   },
   accepted: {
     label: "Accepted",
-    color: "var(--chart-1)",
+    color: "#16a34a",
   },
   declined: {
     label: "Declined",
-    color: "var(--destructive)",
+    color: "#dc2626",
   },
 } satisfies ChartConfig;
 
