@@ -18,11 +18,12 @@ import {
 } from "@/lib/dispositions";
 import {
   getFindingSeverityBadgeVariant,
+  getFindingSeverityLabel,
   getFindingStatusLabel,
   getFindingTypeLabel,
 } from "@/lib/findings";
 import { fetchJson, getErrorMessage } from "@/lib/http";
-import { getReviewStatusLabel, REVIEWS_CHANGED_EVENT } from "@/lib/reviews";
+import { getReviewStatusBadgeVariant, getReviewStatusLabel, REVIEWS_CHANGED_EVENT } from "@/lib/reviews";
 import { getDocumentReadinessHref } from "@/lib/workspace-tabs";
 
 type ReadinessResponse = {
@@ -137,7 +138,7 @@ export function DocumentReadinessBoard() {
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge variant="secondary">
+                    <Badge variant={getReviewStatusBadgeVariant(item.status)}>
                       {getReviewStatusLabel(item.status)}
                     </Badge>
                     <Badge variant="outline">
@@ -208,7 +209,7 @@ export function DocumentReadinessBoard() {
                                 finding.severity
                               )}
                             >
-                              {finding.severity}
+                              {getFindingSeverityLabel(finding.severity)}
                             </Badge>
                             <Badge variant="outline">
                               {getFindingTypeLabel(finding.type)}

@@ -19,14 +19,18 @@ import {
 } from "@/components/ui/chart";
 import type { DocumentCompletenessPoint } from "@/lib/dashboard-kpis";
 
+/** Matches --success-border / --destructive-border (Recharts needs concrete fills). */
+const FOUND_COLOR = "#16a34a";
+const MISSING_COLOR = "#dc2626";
+
 const completenessChartConfig = {
   found: {
     label: "Found",
-    color: "var(--chart-2)",
+    color: FOUND_COLOR,
   },
   missing: {
     label: "Missing",
-    color: "var(--destructive)",
+    color: MISSING_COLOR,
   },
 } satisfies ChartConfig;
 
@@ -75,12 +79,12 @@ export function DashboardCompletenessChart({
             <ChartLegend content={<ChartLegendContent />} />
             <Bar
               dataKey="found"
-              fill="var(--color-found)"
+              fill={FOUND_COLOR}
               radius={[3, 3, 0, 0]}
             />
             <Bar
               dataKey="missing"
-              fill="var(--color-missing)"
+              fill={MISSING_COLOR}
               radius={[3, 3, 0, 0]}
             />
           </BarChart>

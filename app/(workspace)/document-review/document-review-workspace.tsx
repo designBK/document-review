@@ -4,10 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -28,6 +35,7 @@ import { useReviews } from "@/hooks/use-reviews";
 import {
   formatEvidenceCitation,
   getFindingSeverityBadgeVariant,
+  getFindingSeverityLabel,
   getFindingStatusLabel,
   getFindingTypeLabel,
   resolveEvidenceDocumentLabel,
@@ -35,7 +43,7 @@ import {
   type FindingStatus,
 } from "@/lib/findings";
 import { fetchJson, getErrorMessage } from "@/lib/http";
-import { getReviewStatusLabel, type ReviewStatus } from "@/lib/reviews";
+import { getReviewStatusBadgeVariant, getReviewStatusLabel, type ReviewStatus } from "@/lib/reviews";
 import {
   buildCompletenessRows,
   getCompletenessStatusLabel,
@@ -134,6 +142,23 @@ export function DocumentReviewWorkspace() {
   const completeness = useMemo(
     () => buildCompletenessRows(selectedReview, findings),
     [selectedReview, findings]
+  );
+  const findingsReviewedCount = useMemo(
+    () => findings.filter((finding) => finding.status !== "open").length,
+    [findings]
+  );
+  const expectedDocumentPresence = useMemo(() => {
+    if (!selectedReview) return [];
+    return EXPECTED_DOCUMENTS.map((doc) => ({
+      ...doc,
+      present: selectedReview.documents.some(
+        (item) => detectDocumentKind(item.fileName) === doc.kind
+      ),
+    }));
+  }, [selectedReview]);
+  const missingExpectedDocuments = useMemo(
+    () => expectedDocumentPresence.filter((doc) => !doc.present),
+    [expectedDocumentPresence]
   );
 
   async function updateFindingStatus(
@@ -248,33 +273,43 @@ export function DocumentReviewWorkspace() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <CardTitle>{selectedReview.businessName}</CardTitle>
-              <CardDescription>
-                Commercial package review — stub analysis checks packet
-                completeness and cross-document consistency.
-              </CardDescription>
-            </div>
+      <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-card px-4 py-3 shadow-header">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">
+              <h2 className="truncate text-sm font-medium">
+                {selectedReview.businessName}
+              </h2>
+              <Badge variant={getReviewStatusBadgeVariant(selectedReview.status)}>
                 {getReviewStatusLabel(selectedReview.status)}
               </Badge>
-              <Link
-                href={getDashboardHref()}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" })
-                )}
-              >
-                Back to Dashboard
-              </Link>
             </div>
+            {missingExpectedDocuments.length === 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="success">All documents present</Badge>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="secondary">
+                  {expectedDocumentPresence.length -
+                    missingExpectedDocuments.length}
+                  /{expectedDocumentPresence.length} documents
+                </Badge>
+                {missingExpectedDocuments.map((doc) => (
+                  <Badge key={doc.kind} variant="warning">
+                    Missing {doc.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 pt-(--card-spacing)">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={getDashboardHref()}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Back to Dashboard
+            </Link>
             <CompleteReviewDialog
               review={selectedReview}
               findings={findings}
@@ -288,76 +323,80 @@ export function DocumentReviewWorkspace() {
                 );
               }}
             />
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto px-0"
-              disabled={analyzing}
-              onClick={() => void runAnalysis()}
-            >
-              {analyzing ? "Running analysis…" : "Re-run stub analysis"}
-            </Button>
           </div>
+        </div>
+      </div>
 
-          {analyzing && findings.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Running stub analysis…
-            </p>
-          ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Commercial package review — stub analysis checks packet completeness
+          and cross-document consistency.
+        </p>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto px-0"
+          disabled={analyzing}
+          onClick={() => void runAnalysis()}
+        >
+          {analyzing ? "Running analysis…" : "Re-run stub analysis"}
+        </Button>
+      </div>
 
-          <div className="flex flex-wrap gap-2">
-            {EXPECTED_DOCUMENTS.map((doc) => {
-              const present = selectedReview.documents.some(
-                (item) => detectDocumentKind(item.fileName) === doc.kind
-              );
-              return (
-                <Badge key={doc.kind} variant={present ? "default" : "outline"}>
-                  {doc.label}: {present ? "found" : "missing"}
-                </Badge>
-              );
-            })}
-          </div>
+      {analyzing && findings.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Running stub analysis…</p>
+      ) : null}
 
-          {error ? (
-            <p className="text-xs text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      {error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <Card>
-        <CardHeader className="border-b">
-          <CardTitle>Completeness checklist</CardTitle>
-          <CardDescription>
-            Required underwriting fields for commercial package submissions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-(--card-spacing)">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Field</TableHead>
-                <TableHead>Required</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {completeness.map(({ field, status }) => (
-                <TableRow key={field.key}>
-                  <TableCell className="font-medium">{field.label}</TableCell>
-                  <TableCell>{field.required ? "Yes" : "No"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {getCompletenessStatusLabel(status)}
-                    </Badge>
-                  </TableCell>
+      <Accordion
+        defaultValue={[]}
+        className="rounded-lg border border-border bg-card text-card-foreground"
+      >
+        <AccordionItem
+          value="completeness"
+          className="border-0 data-open:bg-transparent"
+        >
+          <AccordionTrigger className="px-4 py-4 hover:no-underline">
+            <span className="flex flex-col gap-1 text-left">
+              <span className="font-heading text-sm font-medium">
+                Completeness checklist
+              </span>
+              <span className="text-xs/relaxed font-normal text-muted-foreground">
+                Required underwriting fields for commercial package submissions.
+              </span>
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Field</TableHead>
+                  <TableHead>Required</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {completeness.map(({ field, status }) => (
+                  <TableRow key={field.key}>
+                    <TableCell className="font-medium">{field.label}</TableCell>
+                    <TableCell>{field.required ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {getCompletenessStatusLabel(status)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <Card>
         <CardHeader className="border-b">
@@ -366,8 +405,15 @@ export function DocumentReviewWorkspace() {
             Mark whether you agree with each AI suggestion. Disagree requires a
             short reason so we can improve the model.
           </CardDescription>
+          {findings.length > 0 ? (
+            <CardAction>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {findingsReviewedCount} of {findings.length} reviewed
+              </span>
+            </CardAction>
+          ) : null}
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 pt-(--card-spacing)">
+        <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
           {findings.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No findings yet. Run stub analysis to generate packet insights.
@@ -376,96 +422,68 @@ export function DocumentReviewWorkspace() {
             findings.map((finding) => (
               <div
                 key={finding.id}
-                className="flex flex-col gap-2 rounded-lg border border-border p-3"
+                className="flex flex-col gap-1.5 rounded-lg border border-border px-2.5 py-2"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">{finding.title}</span>
-                  <Badge
-                    variant={getFindingSeverityBadgeVariant(finding.severity)}
-                  >
-                    {finding.severity}
-                  </Badge>
-                  <Badge variant="outline">
-                    {getFindingTypeLabel(finding.type)}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {getFindingStatusLabel(finding.status)}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{finding.summary}</p>
-                {finding.suggestedAction ? (
-                  <p className="text-xs">
-                    <span className="font-medium">Next step: </span>
-                    {finding.suggestedAction}
-                  </p>
-                ) : null}
-                {finding.evidence.length > 0 ? (
-                  <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-                    {finding.evidence.map((item) => (
-                      <li key={item.id}>
-                        {formatEvidenceCitation(
-                          item,
-                          resolveEvidenceDocumentLabel(item, documentNameById)
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm font-medium">
+                        {finding.title}
+                      </span>
+                      <Badge
+                        variant={getFindingSeverityBadgeVariant(
+                          finding.severity
                         )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {finding.status === "disagreed" && finding.disagreementReason ? (
-                  <p className="text-xs">
-                    <span className="font-medium">Disagreement reason: </span>
-                    {finding.disagreementReason}
-                  </p>
-                ) : null}
-                {finding.status === "open" ? (
-                  disagreeingId === finding.id ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`disagree-reason-${finding.id}`}>
-                          Why do you disagree?
-                        </Label>
-                        <Textarea
-                          id={`disagree-reason-${finding.id}`}
-                          value={disagreementReason}
-                          onChange={(event) => {
-                            setDisagreementReason(event.target.value);
-                            if (disagreeError) setDisagreeError(null);
-                          }}
-                          placeholder="e.g. Limits match the schedule on page 2 of the SOV."
-                          disabled={updatingId === finding.id}
-                          aria-invalid={Boolean(disagreeError)}
-                        />
-                        {disagreeError ? (
-                          <p className="text-xs text-destructive" role="alert">
-                            {disagreeError}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={updatingId === finding.id}
-                          onClick={() => confirmDisagree(finding.id)}
-                        >
-                          {updatingId === finding.id
-                            ? "Saving…"
-                            : "Confirm disagree"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={updatingId === finding.id}
-                          onClick={cancelDisagree}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
+                      >
+                        {getFindingSeverityLabel(finding.severity)}
+                      </Badge>
+                      <Badge variant="outline">
+                        {getFindingTypeLabel(finding.type)}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {getFindingStatusLabel(finding.status)}
+                      </Badge>
                     </div>
-                  ) : (
-                    <div className="flex gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {finding.summary}
+                    </p>
+                    {finding.suggestedAction ? (
+                      <p className="text-xs">
+                        <span className="font-medium">Next step: </span>
+                        {finding.suggestedAction}
+                      </p>
+                    ) : null}
+                    {finding.evidence.length > 0 ? (
+                      <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                        {finding.evidence.map((item) => (
+                          <li key={item.id}>
+                            {formatEvidenceCitation(
+                              item,
+                              resolveEvidenceDocumentLabel(
+                                item,
+                                documentNameById
+                              )
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {finding.status === "disagreed" &&
+                    finding.disagreementReason ? (
+                      <p className="text-xs">
+                        <span className="font-medium">
+                          Disagreement reason:{" "}
+                        </span>
+                        {finding.disagreementReason}
+                      </p>
+                    ) : null}
+                  </div>
+                  {finding.status === "open" &&
+                  disagreeingId !== finding.id ? (
+                    <div className="flex shrink-0 gap-1.5">
                       <Button
                         size="sm"
+                        variant="success"
                         disabled={updatingId === finding.id}
                         onClick={() =>
                           void updateFindingStatus(finding.id, "agreed")
@@ -482,7 +500,53 @@ export function DocumentReviewWorkspace() {
                         Disagree
                       </Button>
                     </div>
-                  )
+                  ) : null}
+                </div>
+                {finding.status === "open" &&
+                disagreeingId === finding.id ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`disagree-reason-${finding.id}`}>
+                        Why do you disagree?
+                      </Label>
+                      <Textarea
+                        id={`disagree-reason-${finding.id}`}
+                        value={disagreementReason}
+                        onChange={(event) => {
+                          setDisagreementReason(event.target.value);
+                          if (disagreeError) setDisagreeError(null);
+                        }}
+                        placeholder="e.g. Limits match the schedule on page 2 of the SOV."
+                        disabled={updatingId === finding.id}
+                        aria-invalid={Boolean(disagreeError)}
+                      />
+                      {disagreeError ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          {disagreeError}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={updatingId === finding.id}
+                        onClick={() => confirmDisagree(finding.id)}
+                      >
+                        {updatingId === finding.id
+                          ? "Saving…"
+                          : "Confirm disagree"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={updatingId === finding.id}
+                        onClick={cancelDisagree}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             ))

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useAppRole } from "@/hooks/use-app-role";
 import {
   APP_ROLES,
@@ -48,9 +48,22 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="w-full">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
-        <Badge>Document Review</Badge>
+    <header className="w-full border-b border-border bg-card shadow-header">
+      <div className="mx-auto flex h-20 w-full max-w-5xl items-center justify-between gap-4 px-4">
+        <Link
+          href={getDashboardHref()}
+          className="inline-flex shrink-0 items-center"
+          aria-label="PacketAudit home"
+        >
+          <Image
+            src="/packetaudit-logo.png"
+            alt="PacketAudit"
+            width={320}
+            height={80}
+            className="h-16 w-auto"
+            priority
+          />
+        </Link>
 
         <div className="flex items-center gap-3">
           <Select
@@ -93,7 +106,6 @@ export function SiteHeader() {
           </Button>
         </div>
       </div>
-      <Separator />
     </header>
   );
 }

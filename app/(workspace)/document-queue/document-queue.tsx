@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { EyeIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ import {
 } from "@/lib/dashboard-kpis";
 import { fetchJson, getErrorMessage } from "@/lib/http";
 import {
+  getReviewStatusBadgeVariant,
   getReviewStatusLabel,
   notifyReviewsChanged,
 } from "@/lib/reviews";
@@ -162,7 +164,7 @@ export function DocumentQueue() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
+                      <Badge variant={getReviewStatusBadgeVariant(review.status)}>
                         {getReviewStatusLabel(review.status)}
                       </Badge>
                     </TableCell>
@@ -170,12 +172,19 @@ export function DocumentQueue() {
                       <div className="flex justify-end gap-1">
                         <Link
                           href={getDocumentReviewHref(review.id)}
-                          className={buttonVariants({ variant: "outline" })}
+                          aria-label={`View ${review.businessName}`}
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "icon-sm",
+                          })}
                         >
-                          View
+                          <EyeIcon />
                         </Link>
                         <Button
                           variant="outline"
+                          size="icon-sm"
+                          aria-label={`Delete ${review.businessName}`}
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => {
                             setDeleteError(null);
                             setPendingDelete({
@@ -184,7 +193,7 @@ export function DocumentQueue() {
                             });
                           }}
                         >
-                          Delete
+                          <Trash2Icon />
                         </Button>
                       </div>
                     </TableCell>

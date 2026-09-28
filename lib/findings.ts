@@ -125,8 +125,15 @@ export function getFindingStatusLabel(status: FindingStatus) {
 
 export function getFindingSeverityBadgeVariant(
   severity: FindingSeverity
-): "destructive" | "outline" | "secondary" {
+): "destructive" | "warning" | "info" {
   if (severity === "blocker") return "destructive";
-  if (severity === "warning") return "outline";
-  return "secondary";
+  if (severity === "warning") return "warning";
+  return "info";
+}
+
+export function getFindingSeverityLabel(severity: FindingSeverity) {
+  if (severity === "blocker" || severity === "warning") {
+    return severity.toUpperCase();
+  }
+  return severity;
 }

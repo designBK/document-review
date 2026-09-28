@@ -57,3 +57,25 @@ export function notifyReviewsChanged() {
 export function getReviewStatusLabel(status: ReviewStatus) {
   return REVIEW_STATUS_LABELS[status] ?? status;
 }
+
+/** Badge tone: positive → success, mid-pipeline → info/warning, declined → error. */
+export function getReviewStatusBadgeVariant(
+  status: ReviewStatus
+): "success" | "info" | "warning" | "destructive" | "secondary" {
+  switch (status) {
+    case "signed_off":
+      return "success";
+    case "new":
+    case "under_review":
+    case "ready_for_sign_off":
+      return "info";
+    case "issues_found":
+    case "awaiting_client":
+      return "warning";
+    case "denied":
+    case "cancelled":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
