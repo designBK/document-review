@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,7 +28,6 @@ import { fetchJson, getErrorMessage } from "@/lib/http";
 import { getReviewStatusBadgeVariant, getReviewStatusLabel, REVIEWS_CHANGED_EVENT } from "@/lib/reviews";
 import {
   getDashboardHref,
-  getDocumentReadinessHref,
   getDocumentReviewHref,
 } from "@/lib/workspace-tabs";
 import { cn } from "cn";
@@ -38,7 +37,6 @@ type ReadinessResponse = {
 };
 
 export function DocumentReadinessBoard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const notice = searchParams.get("notice");
   const reviewId = searchParams.get("review");
@@ -76,55 +74,57 @@ export function DocumentReadinessBoard() {
     };
   }, [loadItems]);
 
-  function dismissNotice() {
-    router.replace(
-      getDocumentReadinessHref(reviewId ? { reviewId } : undefined)
-    );
-  }
+  const noticeCopy =
+    notice === "awaiting-client"
+      ? {
+          title: "Client information requested",
+          detail:
+            "The stub client notification was queued. This packet is awaiting client information.",
+        }
+      : notice === "sent-to-sign-off"
+        ? {
+            title: "Sent to manager sign-off",
+            detail:
+              "Ready and deny decisions wait for a manager. Switch to the Manager role in the header to open Sign Off.",
+          }
+        : null;
 
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading readiness…</p>;
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {notice === "sent-to-sign-off" ? (
-        <Alert>
-          <AlertTitle>Sent to manager sign-off</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
-            <span>
-              Ready and deny decisions wait for a manager. Switch to the Manager
-              role in the header to open Sign Off.
-            </span>
-            <button
-              type="button"
-              className="w-fit text-xs font-medium underline-offset-4 hover:underline"
-              onClick={dismissNotice}
-            >
-              Dismiss
-            </button>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {notice === "awaiting-client" ? (
-        <Alert>
-          <AlertTitle>Client information requested</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
-            <span>
-              The stub client notification was queued. This packet now sits on
-              the readiness board as awaiting client.
-            </span>
-            <button
-              type="button"
-              className="w-fit text-xs font-medium underline-offset-4 hover:underline"
-              onClick={dismissNotice}
-            >
-              Dismiss
-            </button>
-          </AlertDescription>
-        </Alert>
-      ) : null}
+    <div className="flex flex-col gap-4">
+      <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-card px-4 py-3 shadow-header">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-sm font-medium">
+                {item?.businessName ?? "Document Readiness"}
+              </h2>
+              {noticeCopy ? (
+                <Badge variant="info">{noticeCopy.title}</Badge>
+              ) : item ? (
+                <Badge variant={getReviewStatusBadgeVariant(item.status)}>
+                  {getReviewStatusLabel(item.status)}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Disposition and findings package for the packet you are reviewing.
+            </p>
+            {notice === "sent-to-sign-off" && noticeCopy ? (
+              <p className="text-xs text-muted-foreground">{noticeCopy.detail}</p>
+            ) : null}
+          </div>
+          <Link
+            href={getDashboardHref()}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
 
       {error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -177,14 +177,6 @@ export function DocumentReadinessBoard() {
                       Disposed{" "}
                       {new Date(item.disposition.createdAt).toLocaleString()}
                     </CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge variant={getReviewStatusBadgeVariant(item.status)}>
-                      {getReviewStatusLabel(item.status)}
-                    </Badge>
-                    <Badge variant="outline">
-                      {getDispositionDecisionLabel(item.disposition.decision)}
-                    </Badge>
                   </div>
                 </div>
               </CardHeader>
