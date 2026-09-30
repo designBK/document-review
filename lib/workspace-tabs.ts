@@ -62,8 +62,9 @@ export function getUnderwriterTabHref(
   return getDocumentReadinessHref(reviewId ? { reviewId } : undefined);
 }
 
-export function getSignOffHref() {
-  return SIGN_OFF_HREF;
+export function getSignOffHref(reviewId?: string) {
+  if (!reviewId) return SIGN_OFF_HREF;
+  return `${SIGN_OFF_HREF}?review=${encodeURIComponent(reviewId)}`;
 }
 
 export function getDashboardHref() {

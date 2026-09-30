@@ -35,7 +35,13 @@ export async function GET() {
           notification_status,
           notification_summary,
           created_by,
-          created_at
+          created_at,
+          manager_name,
+          manager_title,
+          manager_signature,
+          manager_signed_at,
+          return_reason,
+          returned_at
         )
       `
       )

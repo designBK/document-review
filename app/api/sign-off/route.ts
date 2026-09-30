@@ -18,7 +18,13 @@ const DISPOSITION_SELECT = `
   notification_status,
   notification_summary,
   created_by,
-  created_at
+  created_at,
+  manager_name,
+  manager_title,
+  manager_signature,
+  manager_signed_at,
+  return_reason,
+  returned_at
 `;
 
 /** Manager queue: ready/deny dispositions awaiting sign-off before client email. */

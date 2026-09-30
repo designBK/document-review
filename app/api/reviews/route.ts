@@ -48,6 +48,10 @@ export async function GET() {
           size_bytes,
           storage_path,
           created_at
+        ),
+        review_dispositions (
+          return_reason,
+          created_at
         )
       `
       )

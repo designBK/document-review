@@ -33,7 +33,12 @@ export type DocumentCompletenessPoint = {
   missing: number;
 };
 
-const OPEN_STATUSES: ReviewStatus[] = ["new", "under_review", "issues_found"];
+const OPEN_STATUSES: ReviewStatus[] = [
+  "new",
+  "under_review",
+  "issues_found",
+  "returned_for_review",
+];
 
 const KPI_STATUS_MAP: Record<DashboardKpiId, ReviewStatus[]> = {
   open: OPEN_STATUSES,
@@ -67,7 +72,7 @@ export function computeDashboardKpis(reviews: Review[]): DashboardKpi[] {
     {
       id: "open",
       label: "Open",
-      description: "New, under review, or issues found",
+      description: "New, under review, issues found, or returned by a manager",
       count: countByStatuses(reviews, OPEN_STATUSES),
     },
     {

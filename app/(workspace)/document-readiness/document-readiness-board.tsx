@@ -213,7 +213,7 @@ export function DocumentReadinessBoard() {
                 </p>
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-medium">
-                    Findings package ({item.disposition.findingSnapshot.length})
+                    Findings ({item.disposition.findingSnapshot.length})
                   </p>
                   {item.disposition.findingSnapshot.length === 0 ? (
                     <p className="text-xs text-muted-foreground">

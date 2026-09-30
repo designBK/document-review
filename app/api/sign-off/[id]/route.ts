@@ -20,13 +20,64 @@ const DISPOSITION_SELECT = `
   notification_status,
   notification_summary,
   created_by,
-  created_at
+  created_at,
+  manager_name,
+  manager_title,
+  manager_signature,
+  manager_signed_at,
+  return_reason,
+  returned_at
 `;
 
+const MAX_SIGNATURE_LENGTH = 500_000;
+
+function readManagerSignOff(body: unknown) {
+  if (!body || typeof body !== "object") {
+    return "Manager name, title, and signature are required.";
+  }
+
+  const record = body as Record<string, unknown>;
+  const managerName =
+    typeof record.managerName === "string" ? record.managerName.trim() : "";
+  const managerTitle =
+    typeof record.managerTitle === "string" ? record.managerTitle.trim() : "";
+  const signature =
+    typeof record.signature === "string" ? record.signature.trim() : "";
+
+  if (!managerName || !managerTitle || !signature) {
+    return "Manager name, title, and signature are required.";
+  }
+
+  if (managerName.length > 120 || managerTitle.length > 120) {
+    return "Name and title must be 120 characters or fewer.";
+  }
+
+  if (
+    !signature.startsWith("data:image/png;base64,") ||
+    signature.length > MAX_SIGNATURE_LENGTH
+  ) {
+    return "Draw a signature before signing off.";
+  }
+
+  return { managerName, managerTitle, signature };
+}
+
 /** Manager approves ready/deny → send deferred client email. */
-export async function POST(_request: Request, context: IdRouteContext) {
+export async function POST(request: Request, context: IdRouteContext) {
   try {
     const { id } = await context.params;
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      payload = null;
+    }
+
+    const signOff = readManagerSignOff(payload);
+    if (typeof signOff === "string") {
+      return NextResponse.json({ error: signOff }, { status: 400 });
+    }
+
     const supabase = createAdminClient();
 
     const { data: row, error: loadError } = await supabase
@@ -99,6 +150,10 @@ export async function POST(_request: Request, context: IdRouteContext) {
         notification_message_id: notify.messageId,
         notification_status: notify.status,
         notification_summary: notify.summary,
+        manager_name: signOff.managerName,
+        manager_title: signOff.managerTitle,
+        manager_signature: signOff.signature,
+        manager_signed_at: new Date().toISOString(),
       })
       .eq("id", id)
       .select(DISPOSITION_SELECT)
