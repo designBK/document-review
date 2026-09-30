@@ -35,7 +35,13 @@ const DISPOSITION_SELECT = `
   notification_status,
   notification_summary,
   created_by,
-  created_at
+  created_at,
+  manager_name,
+  manager_title,
+  manager_signature,
+  manager_signed_at,
+  return_reason,
+  returned_at
 `;
 
 function isFindingType(value: unknown): value is FindingType {

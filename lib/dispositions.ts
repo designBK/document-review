@@ -42,6 +42,12 @@ export type ReviewDisposition = {
   notificationSummary: string | null;
   createdBy: string | null;
   createdAt: string;
+  managerName: string | null;
+  managerTitle: string | null;
+  managerSignature: string | null;
+  managerSignedAt: string | null;
+  returnReason: string | null;
+  returnedAt: string | null;
 };
 
 export type ReadinessItem = {
@@ -65,6 +71,8 @@ export function getNotificationStatusLabel(status: string) {
       return "Email sent";
     case "failed":
       return "Email failed";
+    case "returned_for_review":
+      return "Returned for re-review";
     default:
       return status;
   }

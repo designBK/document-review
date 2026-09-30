@@ -4,6 +4,7 @@ export const REVIEW_STATUSES = [
   "issues_found",
   "awaiting_client",
   "ready_for_sign_off",
+  "returned_for_review",
   "signed_off",
   "denied",
   "cancelled",
@@ -17,6 +18,7 @@ export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
   issues_found: "Issues found",
   awaiting_client: "Awaiting client",
   ready_for_sign_off: "Ready for sign off",
+  returned_for_review: "Returned for review",
   signed_off: "Signed off",
   denied: "Denied",
   cancelled: "Cancelled",
@@ -38,6 +40,7 @@ export type Review = {
   documents: ReviewDocument[];
   createdAt: string;
   updatedAt: string;
+  returnReason: string | null;
 };
 
 export const DOCUMENT_ACCEPT =
@@ -71,6 +74,7 @@ export function getReviewStatusBadgeVariant(
       return "info";
     case "issues_found":
     case "awaiting_client":
+    case "returned_for_review":
       return "warning";
     case "denied":
     case "cancelled":

@@ -327,6 +327,16 @@ export function DocumentReviewWorkspace() {
         </div>
       </div>
 
+      {selectedReview.status === "returned_for_review" &&
+      selectedReview.returnReason ? (
+        <Alert className="border-warning-border bg-warning-bg text-warning-foreground">
+          <AlertTitle>Returned for re-review</AlertTitle>
+          <AlertDescription className="text-warning-foreground">
+            {selectedReview.returnReason}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           Commercial package review — stub analysis checks packet completeness

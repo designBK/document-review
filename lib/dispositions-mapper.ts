@@ -20,6 +20,12 @@ type DispositionRow = {
   notification_summary: string | null;
   created_by: string | null;
   created_at: string;
+  manager_name?: string | null;
+  manager_title?: string | null;
+  manager_signature?: string | null;
+  manager_signed_at?: string | null;
+  return_reason?: string | null;
+  returned_at?: string | null;
 };
 
 export function mapDisposition(row: DispositionRow): ReviewDisposition {
@@ -42,5 +48,11 @@ export function mapDisposition(row: DispositionRow): ReviewDisposition {
     notificationSummary: row.notification_summary,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    managerName: row.manager_name ?? null,
+    managerTitle: row.manager_title ?? null,
+    managerSignature: row.manager_signature ?? null,
+    managerSignedAt: row.manager_signed_at ?? null,
+    returnReason: row.return_reason ?? null,
+    returnedAt: row.returned_at ?? null,
   };
 }
